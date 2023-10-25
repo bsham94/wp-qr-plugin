@@ -1,0 +1,17 @@
+{
+  "name": "ben-shamas/qrcodeplugin",
+  "description": "A WordPress plugin for QR code generation.",
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=7.4",
+    "chillerlan/php-qrcode": "^4.3"
+  },
+  "autoload": {},
+  "authors": [
+    {
+      "name": "Ben Shamas",
+      "email": "you@example.com"
+    }
+  ],
+  "minimum-stability": "stable"
+}
