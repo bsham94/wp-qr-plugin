@@ -4,6 +4,8 @@ use chillerlan\QRCode\QROptions;
 use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QRCode;
 
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__); // Specify the directory containing your .env file
+$dotenv->load(); // Load environment variables
 /*
 Plugin Name: QR Code Plugin
 */
@@ -11,7 +13,27 @@ Plugin Name: QR Code Plugin
 
 // Hook into the 'plugins_loaded' action to initialize the plugin
 add_action('plugins_loaded', 'qr_code_plugin_init');
+// Plugin Activation Hook
+function my_plugin_activation()
+{
+    // Check if the message is already stored in the database
+    if (!get_option('encryption_message')) {
+        // Set the default message to encrypt for your key
+        $message = getenv('ENCRYPTION_KEY');
 
+        // Add the message to the database
+        add_option('encryption_message', $message);
+    }
+}
+register_activation_hook(__FILE__, 'my_plugin_activation');
+
+// Plugin Deactivation Hook
+function my_plugin_deactivation()
+{
+    // Remove the message from the database upon deactivation
+    delete_option('encryption_message');
+}
+register_deactivation_hook(__FILE__, 'my_plugin_deactivation');
 function qr_code_plugin_init()
 {
     // Initialize the plugin
@@ -120,7 +142,7 @@ class QrCodePlugin
 
                 foreach ($posts as $post) {
                     $key = get_post_meta($post->ID, 'qr_key', true);
-                    $url_with_key = esc_url(add_query_arg('key', $key, get_permalink($post->ID)));
+                    $url_with_key = esc_url(add_query_arg('key', $this->encryptKey($key), get_permalink($post->ID)));
                     if ($this->categoryCheck($post->ID, 'user_profile')) {
                         ?>
                         <tr>
@@ -182,7 +204,7 @@ class QrCodePlugin
         $test_display = get_option('test_display');
 
         // Check if the current view is a single post
-        if (!is_admin() && !$test_display) {
+        if (!is_admin() && is_single() && !$test_display) {
             // Get the current post's ID
             $post_id = get_the_ID();
 
@@ -190,20 +212,30 @@ class QrCodePlugin
             if ($this->is_user_profile_post()) {
                 if (!get_post_meta($post_id, '_redirected', true)) {
                     // Check if the correct key is provided in the query string
-                    $key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
 
+                    $key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
+                    $saved_key = get_post_meta($post_id, 'qr_key', true);
+                    $decrypted = openssl_decrypt($key, 'AES-256-CBC', $saved_key, 0, $saved_key);
                     // Get the author's ID for the current post
                     $author_id = get_post_field('post_author', $post_id);
-                    if (!$this->is_key_valid($key, $post_id) && (get_current_user_id() !== $author_id && !current_user_can('administrator'))) {
+                    if (!$this->is_key_valid($decrypted, $post_id) && (get_current_user_id() !== $author_id && !current_user_can('administrator'))) {
                         // Redirect to the main URL of the site
                         update_post_meta($post_id, '_redirected', true);
                         wp_redirect(home_url());
                         exit;
                     }
                 } else {
+                    global $wp;
                     $this->reset_redirected_flag($post_id);
-                    wp_redirect(home_url());
-                    exit;
+                    $current_url = home_url(add_query_arg(array(), $wp->request));
+                    // Get the home URL
+                    $home_url = home_url('/');
+                    // Compare the current URL with the home URL
+                    if ($current_url !== $home_url) {
+                        // Redirect to the home URL
+                        wp_safe_redirect($home_url);
+                        exit;
+                    }
                 }
             }
         }
@@ -234,10 +266,10 @@ class QrCodePlugin
     public function is_key_valid($key, $post_id)
     {
         // Get the saved key value from post meta for the selected post
-        $saved_key = get_post_meta($post_id, 'qr_key', true);
+        //$saved_key = get_post_meta($post_id, 'qr_key', true);
 
         // Compare the submitted key with the saved key
-        return $key === $saved_key;
+        return $key === get_option('encryption_message');
     }
 
     public function myShortcodeFunction($atts, $content = null)
@@ -267,9 +299,9 @@ class QrCodePlugin
         }
         // Get the current post's URL
         $post_url = get_permalink($post_id);
-
+        $encrypt_key = $this->encryptKey($key);
         // Construct the URL with the key
-        $url_with_key = esc_url(add_query_arg('key', $key, $post_url));
+        $url_with_key = esc_url(add_query_arg('key', $encrypt_key, $post_url));
 
         // Example QR code generation code
         // You can use $url_with_key as the URL for the QR code
@@ -277,7 +309,13 @@ class QrCodePlugin
 
         return $generator->generate();
     }
+    public function encryptKey($key)
+    {
+        $message = get_option('encryption_message');
+        $encrypt_key = openssl_encrypt($message, 'AES-256-CBC', $key, 0, $key);
+        return $encrypt_key;
 
+    }
     function deleteQRCode()
     {
         $post_id = intval($_GET['post_id']);
