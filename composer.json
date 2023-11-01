@@ -7,7 +7,6 @@
     "chillerlan/php-qrcode": "^4.3",
     "vlucas/phpdotenv": "^5.5"
   },
-  "autoload": {},
   "authors": [
     {
       "name": "Ben Shamas",

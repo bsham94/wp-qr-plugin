@@ -3,7 +3,7 @@
         'name' => 'ben-shamas/qrcodeplugin',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'e9478a6bae2ae25356dbe88f4f431fd3eccaf882',
+        'reference' => '454d5a9d9903f4398aed5c683aa2ec86beb97a36',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'ben-shamas/qrcodeplugin' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'e9478a6bae2ae25356dbe88f4f431fd3eccaf882',
+            'reference' => '454d5a9d9903f4398aed5c683aa2ec86beb97a36',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
