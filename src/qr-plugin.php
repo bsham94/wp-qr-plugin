@@ -87,12 +87,9 @@ class QrCodePlugin
     function handle_custom_endpoint_request($request)
     {
         // Your code to process the request and generate a response
-        // $response_data = array('message' => 'Hello, this is your custom endpoint!');
-        // return new WP_REST_Response($response_data, 200);
         $key = $request->get_param('value');
         if ($key) {
-            //$post_id = get_the_ID();
-            // $key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
+
             $secret = get_option('encryption_message');
             $iv = get_option('iv');
             $decrypted = openssl_decrypt($key, 'AES-256-CBC', $secret, 0, $iv);
@@ -111,9 +108,22 @@ class QrCodePlugin
                 $post_id = $post->ID;
                 $post_key = get_post_meta($post_id, 'qr_key', true);
                 if ($post_key === $decrypted) {
+                    $apikey = get_option('api_key');
+                    $phrase = $this->generateRandomString();
+                    $phraseHash = hash('sha256', $phrase);
+                    // Save the passphrase and timestamp in the WordPress database
+                    $data_to_save = array(
+                        'passphrase' => $phraseHash,
+                    );
+                    // Insert data into a custom table in the database (you need to create the table first)
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'qrapi';
+                    $wpdb->insert($table_name, $data_to_save);
+                    $unique_identifier = $wpdb->insert_id;
+                    $apiValue = openssl_encrypt($apikey, 'AES-256-CBC', $phraseHash, 0, $iv);
                     $slug = get_post_field('post_name', $post_id);
                     $url = get_permalink($post_id);
-                    $url = $url . $slug;
+                    $url = add_query_arg(array('redirect' => 'true', 'uid' => $unique_identifier, 'value' => $apiValue), $url . $slug);
                     wp_redirect($url);
                     exit;
                 }
@@ -121,6 +131,11 @@ class QrCodePlugin
             wp_redirect(home_url());
             exit;
         }
+    }
+    function generateRandomString($length = 16)
+    {
+        $randomBytes = random_bytes($length);
+        return bin2hex($randomBytes);
     }
     function qrPluginAdminPage()
     {
@@ -274,8 +289,13 @@ class QrCodePlugin
         // Example QR code generation code
         // You can use $url_with_key as the URL for the QR code
         $generator = new QrGenerator($url_with_key);
-
-        return $generator->generate();
+        $res = $generator->generate() . "
+        <script>
+        if (window.location.search) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        </script>";
+        return $res;
     }
     public function encryptID($key)
     {
@@ -329,31 +349,65 @@ class QrCodePlugin
     }
     public function redirect_to_main_url_for_user_profile()
     {
+        global $wpdb;
+        global $wp;
+        $home_url = home_url('/');
+        $current_url = home_url(add_query_arg(array(), $wp->request));
         $test_display = get_option('test_display');
-
+        $key = isset($_GET['value']) ? sanitize_text_field($_GET['value']) : '';
+        $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : False;
         // Check if the current view is a single post
         if (!is_admin() && is_single() && !$test_display) {
-            // Get the current post's ID
-            $post_id = get_the_ID();
-
             // Check if the post has the "user_profile" category
             if ($this->is_user_profile_post()) {
+                // Get the current post's ID
+                $post_id = get_the_ID();
                 $author_id = get_post_field('post_author', $post_id);
-                if (get_current_user_id() !== $author_id && !current_user_can('administrator')) {
+                //if (get_current_user_id() !== $author_id && !current_user_can('administrator')) {
+                //True means accessing the page from the QR code
+                //False means accessing the page from the url (direct)
+                if ($redirect === 'true') {
+                    // Get the unique identifier from the query string
+                    $identifier = isset($_GET['uid']) ? intval($_GET['uid']) : 0;
+                    $apiValue = isset($_GET['value']) ? sanitize_text_field($_GET['value']) : '';
+                    if ($identifier > 0) {
+                        // Retrieve the passphrase from the database using the unique identifier
+                        $iv = get_option('iv');
+                        $table_name = $wpdb->prefix . 'qrapi';
+                        $result = $wpdb->get_row($wpdb->prepare("SELECT passphrase FROM $table_name WHERE ID = %d", $identifier));
+                        if ($result) {
+                            $passphrase = $result->passphrase;
+                            $wpdb->delete($table_name, array('ID' => $identifier));
+                            // Decrypt the data using the retrieved passphrase
+                            $decrypted_apikey = openssl_decrypt($apiValue, 'AES-256-CBC', $passphrase, 0, $iv);
+                            if (!$decrypted_apikey) {
+                                wp_safe_redirect($home_url);
+                                exit;
+                            }
+                        } else {
+                            // Handle the case where the unique identifier is not found in the database
+                            // You can redirect or display an error message
+                            wp_safe_redirect($home_url);
+                            exit;
+                        }
+                    } else {
+                        // Handle the case where the unique identifier is missing or invalid
+                        // You can redirect or display an error message
+                        wp_safe_redirect($home_url);
+                        exit;
+                    }
+                } else {
                     // Check if the correct key is provided in the query string
                     $secret = get_option('encryption_message');
                     $iv = get_option('iv');
-                    $key = isset($_GET['value']) ? sanitize_text_field($_GET['value']) : '';
+
                     //$saved_key = get_post_meta($post_id, 'qr_key', true);
                     $decrypted = openssl_decrypt($key, 'AES-256-CBC', $secret, 0, $iv);
                     // Get the author's ID for the current post
 
                     if (!$this->is_key_valid($decrypted, $post_id)) {
-                        global $wp;
+
                         // Redirect to the main URL of the site
-                        $current_url = home_url(add_query_arg(array(), $wp->request));
-                        $home_url = home_url('/');
-                        // wp_redirect(home_url());
                         if ($current_url !== $home_url) {
                             // Redirect to the home URL
                             wp_safe_redirect($home_url);
@@ -361,6 +415,7 @@ class QrCodePlugin
                         }
                     }
                 }
+                //}
             }
         }
     }
