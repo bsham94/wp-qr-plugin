@@ -7,8 +7,12 @@ class QRPluginAdmin
     {
         // Hook into the 'admin_menu' action to add the plugin's admin page
         add_action('admin_menu', array($this, 'adminPage'));
-        add_action('transition_post_status', array($this, 'set_unique_profile_slug'), 10, 3);
+        // add_action('transition_post_status', array($this, 'set_unique_profile_slug'), 10, 3);
+        // Hook into publish_post
+        //add_action('publish_post', array($this, 'set_unique_profile_slug_on_publish'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'));
+        add_action('save_post', array($this, 'add_qr_code_entry'));
+        add_action('set_object_terms', array($this, 'my_category_change_action'), 10, 6);
     }
 
     public function adminPage()
@@ -67,7 +71,7 @@ class QRPluginAdmin
         if (isset($_GET['action']) && $_GET['action'] === 'deleteQrCode') {
             $this->deleteQRCode();
         } else if (isset($_GET['action']) && $_GET['action'] === 'editQrCode') {
-            $this->deleteQRCode();
+            $this->editQRCode();
         } else {
             $this->qrCodeTablePage();
         }
@@ -85,6 +89,9 @@ class QRPluginAdmin
         $posts = $query->posts;
         ?>
         <h1>QR Code Plugin</h1>
+        <a
+            href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "addQrCode"), admin_url())); ?>">Add
+            QR Code</a>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
@@ -155,32 +162,192 @@ class QRPluginAdmin
         return false;
     }
 
-    public function set_unique_profile_slug($new_status, $old_status, $post)
+
+    public function set_unique_profile_slug_on_publish($ID)
     {
-        $test_display = get_option('test_display');
+        $post = get_post($ID);
 
         // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
         $category_check = has_term('user_profile', 'category', $post);
 
-        if ($category_check && !$test_display && $old_status === 'draft' && $new_status === 'publish') {
+        if ($category_check) {
             // Generate a unique slug
-            $unique_slug = uniqid('', False);
-            // Key for encryption should be 16 characters long
-            $len = openssl_cipher_iv_length('aes-256-cbc');
-            $key = uniqid('', True);
-            $key = str_replace('.', '', substr($key, 0, $len + 1));
-
-            // Store the unique slug and key in post meta for later retrieval
-            update_post_meta($post->ID, 'unique_slug', $unique_slug);
-            update_post_meta($post->ID, 'qr_key', $key);
-            // Update the post_name (slug)
-            wp_update_post(
-                array(
-                    'ID' => $post->ID,
-                    'post_name' => $unique_slug,
-                )
-            );
+            // Check if a QR code entry with the same slug or key already exists
+            if (!$this->qr_code_entry_exists($post->ID)) {
+                if (!get_post_meta($post->ID, '_adding_qr_code', true)) {
+                    update_post_meta($post->ID, '_adding_qr_code', true);
+                    $unique_slug = uniqid('', false);
+                    // Key for encryption should be 16 characters long
+                    $len = openssl_cipher_iv_length('aes-256-cbc');
+                    $key = uniqid('', true);
+                    $key = str_replace('.', '', substr($key, 0, $len + 1));
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'qr_code';
+                    $wpdb->insert(
+                        $table_name,
+                        array(
+                            'post_id' => $post->ID,
+                            'unique_slug' => $unique_slug,
+                            'qr_key' => $key,
+                            'category' => 'user_profile',
+                        )
+                    );
+                    // Update the post_name (slug)
+                    wp_update_post(
+                        array(
+                            'ID' => $post->ID,
+                            'post_name' => $unique_slug,
+                        )
+                    );
+                } else {
+                    update_post_meta($post->ID, '_adding_qr_code', false);
+                }
+            }
         }
+    }
+    function my_category_change_action($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids)
+    {
+        // Check if the object is a post and the taxonomy is 'category'
+        if ($taxonomy === 'category' && get_post_status($object_id) === 'publish') {
+            // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
+            $category_check = has_term('user_profile', 'category', $object_id);
+            if ($category_check) {
+                // Generate a unique slug
+                // Check if a QR code entry with the same slug or key already exists
+                if (!$this->qr_code_entry_exists($object_id)) {
+                    if (!get_post_meta($object_id, '_adding_qr_code', true)) {
+                        update_post_meta($object_id, '_adding_qr_code', true);
+                        $unique_slug = uniqid('', false);
+                        // Key for encryption should be 16 characters long
+                        $len = openssl_cipher_iv_length('aes-256-cbc');
+                        $key = uniqid('', true);
+                        $key = str_replace('.', '', substr($key, 0, $len + 1));
+                        global $wpdb;
+                        $table_name = $wpdb->prefix . 'qr_code';
+                        $wpdb->insert(
+                            $table_name,
+                            array(
+                                'post_id' => $object_id,
+                                'unique_slug' => $unique_slug,
+                                'qr_key' => $key,
+                                'category' => 'user_profile',
+                            )
+                        );
+                        // Update the post_name (slug)
+                        wp_update_post(
+                            array(
+                                'ID' => $object_id,
+                                'post_name' => $unique_slug,
+                            )
+                        );
+                    }
+                } else {
+                    update_post_meta($object_id, '_adding_qr_code', false);
+                }
+            }
+        }
+    }
+
+    public function set_unique_profile_slug($new_status, $old_status, $post)
+    {
+        // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
+        $category_check = has_term('user_profile', 'category', $post);
+        if ($category_check && $old_status === 'draft' && $new_status === 'publish') {
+            // Generate a unique slug
+            // Check if a QR code entry with the same slug or key already exists
+            if (!$this->qr_code_entry_exists($post->ID)) {
+                if (!get_post_meta($post->ID, '_adding_qr_code', True)) {
+                    update_post_meta($post->ID, '_adding_qr_code', True);
+                    $unique_slug = uniqid('', False);
+                    // Key for encryption should be 16 characters long
+                    $len = openssl_cipher_iv_length('aes-256-cbc');
+                    $key = uniqid('', True);
+                    $key = str_replace('.', '', substr($key, 0, $len + 1));
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'qr_code';
+                    $wpdb->insert(
+                        $table_name,
+                        array(
+                            'post_id' => $post->ID,
+                            'unique_slug' => $unique_slug,
+                            'qr_key' => $key,
+                            'category' => 'user_profile',
+                        )
+                    );
+                    // Update the post_name (slug)
+                    wp_update_post(
+                        array(
+                            'ID' => $post->ID,
+                            'post_name' => $unique_slug,
+                        )
+                    );
+                } else {
+                    update_post_meta($post->ID, '_adding_qr_code', false);
+                }
+            }
+        }
+    }
+
+    function add_qr_code_entry($post_id)
+    {
+        // Check if the post is published
+        if (get_post_status($post_id) === 'publish') {
+            // Check if the post has the "user_profile" category
+            if (has_term('user_profile', 'category', $post_id)) {
+                // Check if a QR code entry with the same slug or key already exists
+                if (!$this->qr_code_entry_exists($post_id)) {
+                    if (!get_post_meta($post_id, '_adding_qr_code', True)) {
+                        update_post_meta($post_id, '_adding_qr_code', True);
+                        // Generate a unique slug
+                        $unique_slug = uniqid('', False);
+                        $len = openssl_cipher_iv_length('aes-256-cbc');
+                        // Generate a unique key
+                        $key = uniqid('', True);
+                        $key = str_replace('.', '', substr($key, 0, $len + 1));
+                        global $wpdb;
+                        $table_name = $wpdb->prefix . 'qr_code';
+                        $wpdb->insert(
+                            $table_name,
+                            array(
+                                'post_id' => $post_id,
+                                'unique_slug' => $unique_slug,
+                                'qr_key' => $key,
+                                'category' => 'user_profile',
+                            )
+                        );
+                        wp_update_post(
+                            array(
+                                'ID' => $post_id,
+                                'post_name' => $unique_slug,
+                            )
+                        );
+                    }
+                } else {
+                    if (get_post_meta($post_id, '_adding_qr_code', True)) {
+                        update_post_meta($post_id, '_adding_qr_code', False);
+                    }
+                }
+            }
+        }
+    }
+
+
+    function qr_code_entry_exists($post_id)
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'qr_code';
+
+        $query = $wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name WHERE post_id = %d",
+            $post_id
+        );
+
+        return (int) $wpdb->get_var($query) > 0;
+    }
+    function editQRCode()
+    {
+        return "<h1>Edit QR Code</h1>";
+
     }
     function deleteQRCode()
     {

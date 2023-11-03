@@ -43,6 +43,7 @@ function my_plugin_activation()
         add_option('api_key', $apiKey);
     }
     create_passphrase_table();
+    create_qr_table();
 }
 
 
@@ -54,6 +55,7 @@ function my_plugin_deactivation()
     delete_option('iv');
     delete_option('api_key');
     delete_passphrase_table();
+    delete_qr_table();
 }
 
 function qr_code_plugin_init()
@@ -72,7 +74,7 @@ function qr_code_plugin_init()
 function create_passphrase_table()
 {
     global $wpdb;
-    $table_name = $wpdb->prefix . 'qrapi'; // Replace 'passphrases' with your preferred table name
+    $table_name = $wpdb->prefix . 'qr_api'; // Replace 'passphrases' with your preferred table name
 
     $charset_collate = $wpdb->get_charset_collate();
 
@@ -85,14 +87,42 @@ function create_passphrase_table()
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
 }
+function create_qr_table()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'qr_code'; // Replace 'custom_table' with your desired table name
+
+    $sql = "CREATE TABLE $table_name (
+    id INT NOT NULL AUTO_INCREMENT,
+    post_id INT NOT NULL,
+    unique_slug VARCHAR(255) NOT NULL,
+    qr_key VARCHAR(25) NOT NULL,  
+    category VARCHAR(255) NOT NULL,
+    PRIMARY KEY (id)
+) {$wpdb->get_charset_collate()};";
+
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta($sql);
+}
 function delete_passphrase_table()
 {
     global $wpdb;
-    $table_name = $wpdb->prefix . 'qrapi'; // Replace 'passphrases' with your table name
+    $table_name = $wpdb->prefix . 'qr_api'; // Replace 'passphrases' with your table name
 
     // Check if the table exists
     if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
         // Table exists, so we can delete it
+        $wpdb->query("DROP TABLE $table_name");
+    }
+}
+function delete_qr_table()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'qr_code'; // Replace 'custom_table' with your table name
+
+    // Check if the table exists
+    if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name) {
+        // Delete the table
         $wpdb->query("DROP TABLE $table_name");
     }
 }
