@@ -9,11 +9,15 @@ if (!defined('WPINC')) {
 
 define("AUTOLOADPATH", dirname(__FILE__) . '/vendor/autoload.php');
 define("BASE_URL", plugins_url('/', __FILE__));
-define("SRC", plugin_dir_path(__FILE__) . '/src/qr-plugin.php');
-
+define("FRONTEND", plugin_dir_path(__FILE__) . '/src/qr-plugin-frontend.php');
+define("ADMIN", plugin_dir_path(__FILE__) . '/src/qr-plugin-admin.php');
+define("API", plugin_dir_path(__FILE__) . '/src/qr-plugin-api.php');
 
 require_once AUTOLOADPATH;
-require_once SRC;
+require_once FRONTEND;
+require_once ADMIN;
+require_once API;
+
 
 
 register_deactivation_hook(__FILE__, 'my_plugin_deactivation');
@@ -55,8 +59,13 @@ function my_plugin_deactivation()
 function qr_code_plugin_init()
 {
     // Initialize the plugin
-    $qr_code_plugin = new QrCodePlugin();
-    $qr_code_plugin->initialize_hooks();
+    $qr_code_plugin_frontend = new QrCodePluginFrontend();
+    $qr_code_plugin_frontend->initialize_hooks();
+    $qr_code_plugin_admin = new QRPluginAdmin();
+    $qr_code_plugin_admin->initialize_hooks();
+    $qr_code_plugin_api = QRPluginAPI::get_instance();
+    $qr_code_plugin_api->initialize_hooks();
+
 
 }
 

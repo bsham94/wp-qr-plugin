@@ -16,11 +16,16 @@ class QrGenerator
 
     public function generate()
     {
-        $options = new QROptions;
-        $options->bgColor = [255, 255, 255];
-        $options->outputType = "png";
+        // $optionsDL = new QROptions;
+        // $optionsDL->bgColor = [200, 150, 200];
+        // $optionsDL->outputType = "png";
         // Generate the QR code image HTML
-        $qr_code_image = '<img src="' . (new QRCode)->render($this->data) . '" alt="QR Code" />';
+        $options = new QROptions;
+        $options->returnResource = True;
+        $gdImage = (new QRCode($options))->render($this->data);
+        $width = imagesx($gdImage);
+        $height = imagesy($gdImage);
+        $qr_code_image = '<img src="' . (new QRCode)->render($this->data) . '" alt="QR Code" width="' . $width . '" . "height="' . $height . '"/>';
 
         // Create a download link
         $download_link = '<a id="qr-button" href="' . (new QRCode)->render($this->data) . '" download="qr_code.png">Download QR Code</a>';

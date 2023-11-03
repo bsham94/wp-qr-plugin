@@ -1,17 +1,21 @@
 <?php
-class QR_API
+class QRPluginAPI
 {
     private static $instance = null;
 
     public static function get_instance()
     {
         if (self::$instance == null) {
-            self::$instance = new QR_API();
+            self::$instance = new QRPluginAPI();
         }
 
         return self::$instance;
     }
-
+    public function initialize_hooks()
+    {
+        add_action('rest_api_init', array($this, 'register_custom_endpoint'));
+        add_action('template_redirect', array($this, 'redirect_to_main_url_for_user_profile'));
+    }
     function register_custom_endpoint()
     {
         $res = register_rest_route(
@@ -63,9 +67,9 @@ class QR_API
                     exit;
                 }
             }
-            wp_redirect(home_url());
-            exit;
         }
+        wp_redirect(home_url());
+        exit;
     }
     public function redirect_to_main_url_for_user_profile()
     {

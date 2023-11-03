@@ -1,30 +1,16 @@
 <?php
-require_once AUTOLOADPATH;
-require_once __DIR__ . '/qr-generator.php';
-require_once __DIR__ . '/qr-api.php';
+require_once __DIR__ . '/encryptId.php';
 
-class QrCodePlugin
+class QRPluginAdmin
 {
     public function initialize_hooks()
     {
-
         // Hook into the 'admin_menu' action to add the plugin's admin page
         add_action('admin_menu', array($this, 'adminPage'));
-        add_shortcode('my_shortcode', array($this, 'myShortcodeFunction'));
         add_action('transition_post_status', array($this, 'set_unique_profile_slug'), 10, 3);
         add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'));
-
-        add_action('rest_api_init', array(QR_API::get_instance(), 'register_custom_endpoint'));
-        // add_action('rest_api_init', array($this, 'register_custom_endpoint_with_encryption'));
-        add_action('template_redirect', array(QR_API::get_instance(), 'redirect_to_main_url_for_user_profile'));
-        // add_action('template_redirect', array($this, 'redirect_to_main_url_for_user_profile_with_encryption'));
     }
-    public function enqueue_styles()
-    {
-        wp_register_style("qr-plugin-css", BASE_URL . '/css/qr-plugin.css');
-        wp_enqueue_style("qr-plugin-css");
 
-    }
     public function adminPage()
     {
         $mainPageHook = add_menu_page('QR Code Plugin', 'QR Code Plugin', 'manage_options', 'qrcode-plugin-settings', array($this, 'qrPluginAdminPage'), 'dashicons-admin-plugins');
@@ -68,12 +54,19 @@ class QrCodePlugin
         echo '<input type="checkbox" id="test_display" name="test_display" value="1" ' . checked(1, $test_display, false) . ' />';
         echo '<label for="test_display">Enable test display</label>';
     }
+    public function enqueue_styles()
+    {
+        wp_register_style("qr-plugin-css", BASE_URL . '/css/qr-plugin.css');
+        wp_enqueue_style("qr-plugin-css");
 
+    }
 
     function qrPluginAdminPage()
     {
         //Determine what page is being displayed
         if (isset($_GET['action']) && $_GET['action'] === 'deleteQrCode') {
+            $this->deleteQRCode();
+        } else if (isset($_GET['action']) && $_GET['action'] === 'editQrCode') {
             $this->deleteQRCode();
         } else {
             $this->qrCodeTablePage();
@@ -106,13 +99,18 @@ class QrCodePlugin
                 foreach ($posts as $post) {
                     $key = get_post_meta($post->ID, 'qr_key', true);
                     //Change URL to the api endpoint
-                    $encrypt_key = $this->encryptID($key);
+                    $encrypt_key = EncryptID::encryptID($key);
                     // Construct the URL with the key
                     $namespace = 'qr-plugin/v1'; // Replace with your plugin's namespace
                     $route = 'qr-endpoint'; // Replace with your endpoint's route
                     // Construct the URL of the registered endpoint with the 'value' query parameter
                     $endpoint_url = rest_url("$namespace/$route?value=$encrypt_key");
                     $url_with_key = esc_url($endpoint_url);
+                    $options = new \chillerlan\QRCode\QROptions;
+                    $options->returnResource = True;
+                    $gdImage = (new \chillerlan\QRCode\QRCode($options))->render($url_with_key);
+                    $width = imagesx($gdImage);
+                    $height = imagesy($gdImage);
                     //Only display user_profile posts. This is a custom category
                     if ($this->categoryCheck($post->ID, 'user_profile')) {
                         ?>
@@ -121,10 +119,15 @@ class QrCodePlugin
                                 <?php echo esc_html($post->post_title); ?>
                             </td>
                             <td>
-                                <img src="<?php echo (new \chillerlan\QRCode\QRCode)->render($url_with_key); ?>" alt="QR Code" />
+                                <img src="<?php echo (new \chillerlan\QRCode\QRCode)->render($url_with_key) ?>" alt="QR Code"
+                                    width="<?php echo $width ?>" height="<?php echo $height ?>" />
                             </td>
                             <td>
-                                <a href="<?php echo esc_url($url_with_key); ?>" target="_blank">View</a>
+                                <a href="<?php echo esc_url($url_with_key); ?>" target="_blank">View</a> |
+                                <a href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "editQrCode", "id" => "1"), admin_url())); ?>"
+                                    target="_blank">Edit</a> |
+                                <a href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "deleteQrCode", "id" => "1"), admin_url())); ?>"
+                                    target="_blank">Delete</a>
                             </td>
                         </tr>
                         <?php
@@ -179,71 +182,14 @@ class QrCodePlugin
             );
         }
     }
-    public function myShortcodeFunction($atts, $content = null)
-    {
-        // Get the current post's ID
-        $post_id = get_the_ID();
-
-        // Check if the post has the "user_profile" category
-        $categories = get_the_category($post_id);
-        $is_user_profile = false;
-
-        foreach ($categories as $category) {
-            if ($category->slug === 'user_profile') {
-                $is_user_profile = true;
-                break;
-            }
-        }
-
-        if (!$is_user_profile) {
-            return 'This is not a user profile.';
-        }
-
-        // Retrieve the key from post meta (replace 'qr_key' with your meta key)
-        $key = get_post_meta($post_id, 'qr_key', true);
-        if (!$key) {
-            return 'No QR Code Found';
-        }
-        // Get the current post's URL
-        $post_url = get_permalink($post_id);
-        $encrypt_key = $this->encryptID($key);
-        // Construct the URL with the key
-        $namespace = 'qr-plugin/v1'; // Replace with your plugin's namespace
-        $route = 'qr-endpoint'; // Replace with your endpoint's route
-
-        // Construct the URL of the registered endpoint with the 'value' query parameter
-        $endpoint_url = rest_url("$namespace/$route?value=$encrypt_key");
-
-        // Construct the URL of the registered endpoint
-        $endpoint_url = rest_url("$namespace/$route");
-
-        $url_with_key = esc_url($endpoint_url);
-
-        // Example QR code generation code
-        // You can use $url_with_key as the URL for the QR code
-        $generator = new QrGenerator($url_with_key);
-        $res = $generator->generate() . "
-        <script>
-        if (window.location.search) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        </script>";
-        return $res;
-    }
-    public function encryptID($key)
-    {
-        $secret = get_option('encryption_message');
-        $iv = get_option('iv');
-        $encrypt_key = openssl_encrypt($key, 'AES-256-CBC', $secret, 0, $iv);
-        return $encrypt_key;
-
-    }
     function deleteQRCode()
     {
         $post_id = intval($_GET['post_id']);
         $key = sanitize_text_field($_GET['value']);
         // Ensure the post ID is valid and the key is provided
         if (!empty($post_id) && !empty($key)) {
+            // Remove the "user_profile" category from the post
+            wp_remove_object_terms($post_id, 'user_profile', 'category');
             // Use the delete_post_meta function to delete the post meta
             delete_post_meta($post_id, 'qr_key', $key);
         }
