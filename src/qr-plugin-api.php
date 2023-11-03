@@ -80,10 +80,9 @@ class QRPluginAPI
         global $wp;
         $home_url = home_url('/');
         $current_url = home_url(add_query_arg(array(), $wp->request));
-        $test_display = get_option('test_display');
 
         // Check if the current view is a single post
-        if (!is_admin() && is_single() && !$test_display) {
+        if (!is_admin() && is_single()) {
             // Check if the post has the "user_profile" category
             if ($this->is_user_profile_post()) {
                 // Get the current post's ID
@@ -133,88 +132,6 @@ class QRPluginAPI
             }
         }
     }
-
-    // function handle_custom_endpoint_request($request)
-    // {
-    //     // Your code to process the request and generate a response
-    //     $key = $request->get_param('value');
-    //     if ($key) {
-
-    //         $secret = get_option('encryption_message');
-    //         $iv = get_option('iv');
-    //         $decrypted = openssl_decrypt($key, 'AES-256-CBC', $secret, 0, $iv);
-    //         // Get post id associated with key
-    //         // If post id exists, get slug and redirect to post.
-    //         // If post doesnt exist, the key does not correspond to a post, redirect to another page.
-    //         $args = array(
-    //             'post_type' => 'post',
-    //             'post_status' => 'publish',
-    //             'category_name' => 'user_profile',
-    //             'posts_per_page' => -1,
-    //         );
-    //         $query = new WP_Query($args);
-    //         $posts = $query->posts;
-    //         foreach ($posts as $post) {
-    //             $post_id = $post->ID;
-    //             $post_key = get_post_meta($post_id, 'qr_key', true);
-    //             if ($post_key === $decrypted) {
-    //                 $apikey = get_option('api_key');
-    //                 $slug = get_post_field('post_name', $post_id);
-    //                 $url = get_permalink($post_id);
-    //                 $url = add_query_arg(array('redirect' => 'true', 'value' => urlencode($apikey)), $url . $slug);
-    //                 wp_redirect($url);
-    //                 exit;
-    //             }
-    //         }
-    //     }
-    //     wp_redirect(home_url());
-    //     exit;
-    // }
-    // public function redirect_to_main_url_for_user_profile()
-    // {
-    //     global $wpdb;
-    //     global $wp;
-    //     $home_url = home_url('/');
-    //     $current_url = home_url(add_query_arg(array(), $wp->request));
-    //     $test_display = get_option('test_display');
-    //     // Check if the current view is a single post
-    //     if (!is_admin() && is_single() && !$test_display) {
-    //         // Check if the post has the "user_profile" category
-    //         if ($this->is_user_profile_post()) {
-    //             // Get the current post's ID
-    //             $post_id = get_the_ID();
-    //             $author_id = get_post_field('post_author', $post_id);
-    //             if (get_current_user_id() !== $author_id && !current_user_can('administrator')) {
-    //                 $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : False;
-    //                 //True means accessing the page from the QR code
-    //                 //False means accessing the page from the url (direct)
-    //                 if ($redirect === 'true') {
-    //                     // Get the unique identifier from the query string
-    //                     $apiKey = get_option('api_key');
-    //                     $apiValue = isset($_GET['value']) ? urldecode(sanitize_text_field($_GET['value'])) : '';
-    //                     if ($apiKey !== $apiValue) {
-    //                         wp_safe_redirect($home_url);
-    //                         exit;
-    //                     }
-    //                 } else {
-    //                     // Check if the correct key is provided in the query string
-    //                     $secret = get_option('encryption_message');
-    //                     $iv = get_option('iv');
-    //                     $key = isset($_GET['value']) ? sanitize_text_field($_GET['value']) : '';
-    //                     $decrypted = openssl_decrypt($key, 'AES-256-CBC', $secret, 0, $iv);
-    //                     if (!$this->is_key_valid($decrypted, $post_id)) {
-    //                         // Redirect to the main URL of the site
-    //                         if ($current_url !== $home_url) {
-    //                             // Redirect to the home URL
-    //                             wp_safe_redirect($home_url);
-    //                             exit;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 
     function handle_custom_endpoint_request_with_encryption($request)
     {
@@ -270,9 +187,8 @@ class QRPluginAPI
         global $wp;
         $home_url = home_url('/');
         $current_url = home_url(add_query_arg(array(), $wp->request));
-        $test_display = get_option('test_display');
         // Check if the current view is a single post
-        if (!is_admin() && is_single() && !$test_display) {
+        if (!is_admin() && is_single()) {
             // Check if the post has the "user_profile" category
             if ($this->is_user_profile_post()) {
                 // Get the current post's ID

@@ -7,11 +7,7 @@ class QRPluginAdmin
     {
         // Hook into the 'admin_menu' action to add the plugin's admin page
         add_action('admin_menu', array($this, 'adminPage'));
-        // add_action('transition_post_status', array($this, 'set_unique_profile_slug'), 10, 3);
-        // Hook into publish_post
-        //add_action('publish_post', array($this, 'set_unique_profile_slug_on_publish'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'));
-        add_action('save_post', array($this, 'add_qr_code_entry'));
         add_action('set_object_terms', array($this, 'my_category_change_action'), 10, 6);
     }
 
@@ -72,6 +68,8 @@ class QRPluginAdmin
             $this->deleteQRCode();
         } else if (isset($_GET['action']) && $_GET['action'] === 'editQrCode') {
             $this->editQRCode();
+        } else if (isset($_GET['action']) && $_GET['action'] === 'addQrCode') {
+            $this->addQRCode();
         } else {
             $this->qrCodeTablePage();
         }
@@ -131,10 +129,11 @@ class QRPluginAdmin
                             </td>
                             <td>
                                 <a href="<?php echo esc_url($url_with_key); ?>" target="_blank">View</a> |
-                                <a href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "editQrCode", "id" => "1"), admin_url())); ?>"
-                                    target="_blank">Edit</a> |
-                                <a href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "deleteQrCode", "id" => "1"), admin_url())); ?>"
-                                    target="_blank">Delete</a>
+                                <a
+                                    href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "editQrCode", "id" => $post->ID), admin_url())); ?>">Edit</a>
+                                |
+                                <a
+                                    href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings", "action" => "deleteQrCode", "id" => $post->ID), admin_url())); ?>">Delete</a>
                             </td>
                         </tr>
                         <?php
@@ -162,49 +161,6 @@ class QRPluginAdmin
         return false;
     }
 
-
-    public function set_unique_profile_slug_on_publish($ID)
-    {
-        $post = get_post($ID);
-
-        // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
-        $category_check = has_term('user_profile', 'category', $post);
-
-        if ($category_check) {
-            // Generate a unique slug
-            // Check if a QR code entry with the same slug or key already exists
-            if (!$this->qr_code_entry_exists($post->ID)) {
-                if (!get_post_meta($post->ID, '_adding_qr_code', true)) {
-                    update_post_meta($post->ID, '_adding_qr_code', true);
-                    $unique_slug = uniqid('', false);
-                    // Key for encryption should be 16 characters long
-                    $len = openssl_cipher_iv_length('aes-256-cbc');
-                    $key = uniqid('', true);
-                    $key = str_replace('.', '', substr($key, 0, $len + 1));
-                    global $wpdb;
-                    $table_name = $wpdb->prefix . 'qr_code';
-                    $wpdb->insert(
-                        $table_name,
-                        array(
-                            'post_id' => $post->ID,
-                            'unique_slug' => $unique_slug,
-                            'qr_key' => $key,
-                            'category' => 'user_profile',
-                        )
-                    );
-                    // Update the post_name (slug)
-                    wp_update_post(
-                        array(
-                            'ID' => $post->ID,
-                            'post_name' => $unique_slug,
-                        )
-                    );
-                } else {
-                    update_post_meta($post->ID, '_adding_qr_code', false);
-                }
-            }
-        }
-    }
     function my_category_change_action($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids)
     {
         // Check if the object is a post and the taxonomy is 'category'
@@ -248,89 +204,6 @@ class QRPluginAdmin
         }
     }
 
-    public function set_unique_profile_slug($new_status, $old_status, $post)
-    {
-        // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
-        $category_check = has_term('user_profile', 'category', $post);
-        if ($category_check && $old_status === 'draft' && $new_status === 'publish') {
-            // Generate a unique slug
-            // Check if a QR code entry with the same slug or key already exists
-            if (!$this->qr_code_entry_exists($post->ID)) {
-                if (!get_post_meta($post->ID, '_adding_qr_code', True)) {
-                    update_post_meta($post->ID, '_adding_qr_code', True);
-                    $unique_slug = uniqid('', False);
-                    // Key for encryption should be 16 characters long
-                    $len = openssl_cipher_iv_length('aes-256-cbc');
-                    $key = uniqid('', True);
-                    $key = str_replace('.', '', substr($key, 0, $len + 1));
-                    global $wpdb;
-                    $table_name = $wpdb->prefix . 'qr_code';
-                    $wpdb->insert(
-                        $table_name,
-                        array(
-                            'post_id' => $post->ID,
-                            'unique_slug' => $unique_slug,
-                            'qr_key' => $key,
-                            'category' => 'user_profile',
-                        )
-                    );
-                    // Update the post_name (slug)
-                    wp_update_post(
-                        array(
-                            'ID' => $post->ID,
-                            'post_name' => $unique_slug,
-                        )
-                    );
-                } else {
-                    update_post_meta($post->ID, '_adding_qr_code', false);
-                }
-            }
-        }
-    }
-
-    function add_qr_code_entry($post_id)
-    {
-        // Check if the post is published
-        if (get_post_status($post_id) === 'publish') {
-            // Check if the post has the "user_profile" category
-            if (has_term('user_profile', 'category', $post_id)) {
-                // Check if a QR code entry with the same slug or key already exists
-                if (!$this->qr_code_entry_exists($post_id)) {
-                    if (!get_post_meta($post_id, '_adding_qr_code', True)) {
-                        update_post_meta($post_id, '_adding_qr_code', True);
-                        // Generate a unique slug
-                        $unique_slug = uniqid('', False);
-                        $len = openssl_cipher_iv_length('aes-256-cbc');
-                        // Generate a unique key
-                        $key = uniqid('', True);
-                        $key = str_replace('.', '', substr($key, 0, $len + 1));
-                        global $wpdb;
-                        $table_name = $wpdb->prefix . 'qr_code';
-                        $wpdb->insert(
-                            $table_name,
-                            array(
-                                'post_id' => $post_id,
-                                'unique_slug' => $unique_slug,
-                                'qr_key' => $key,
-                                'category' => 'user_profile',
-                            )
-                        );
-                        wp_update_post(
-                            array(
-                                'ID' => $post_id,
-                                'post_name' => $unique_slug,
-                            )
-                        );
-                    }
-                } else {
-                    if (get_post_meta($post_id, '_adding_qr_code', True)) {
-                        update_post_meta($post_id, '_adding_qr_code', False);
-                    }
-                }
-            }
-        }
-    }
-
 
     function qr_code_entry_exists($post_id)
     {
@@ -344,21 +217,44 @@ class QRPluginAdmin
 
         return (int) $wpdb->get_var($query) > 0;
     }
+    function addQRCode()
+    {
+        ?>
+        <h1>Add QR Code</h1>
+        <a href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings"), admin_url())); ?>">Back</a>
+        <?php
+    }
     function editQRCode()
     {
-        return "<h1>Edit QR Code</h1>";
+        ?>
+        <h1>Edit QR Code</h1>
+        <a href="<?php echo esc_url(add_query_arg(array("page" => "qrcode-plugin-settings"), admin_url())); ?>">Back</a>
+        <?php
 
     }
     function deleteQRCode()
     {
-        $post_id = intval($_GET['post_id']);
-        $key = sanitize_text_field($_GET['value']);
+        $post_id = intval($_GET['id']);
         // Ensure the post ID is valid and the key is provided
-        if (!empty($post_id) && !empty($key)) {
+        if (!empty($post_id)) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'qr_code';
+
+            // Delete the QR code entry with the corresponding post_id
+            $wpdb->delete(
+                $table_name,
+                array('post_id' => $post_id),
+                array('%d')
+            );
+            wp_update_post(
+                array(
+                    'ID' => $post_id,
+                    'post_status' => 'draft',
+                    // Set to 'draft' to unpublish the post
+                )
+            );
             // Remove the "user_profile" category from the post
             wp_remove_object_terms($post_id, 'user_profile', 'category');
-            // Use the delete_post_meta function to delete the post meta
-            delete_post_meta($post_id, 'qr_key', $key);
         }
         $this->qrCodeTablePage();
     }
