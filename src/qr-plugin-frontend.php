@@ -42,11 +42,15 @@ class QrCodePluginFrontend
     {
         // Get the current post's ID
         $post_id = get_the_ID();
-
         // Check if the post has the "user_profile" category
         $categories = get_the_category($post_id);
         $is_user_profile = false;
-
+        $script = "
+            <script>
+                if (window.location.search) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            </script>";
         foreach ($categories as $category) {
             if ($category->slug === 'user_profile') {
                 $is_user_profile = true;
@@ -55,16 +59,20 @@ class QrCodePluginFrontend
         }
 
         if (!$is_user_profile) {
-            return 'This is not a user profile.';
+            return '<div>This is not a user profile.</div>' . $script;
         }
 
-        // Retrieve the key from post meta (replace 'qr_key' with your meta key)
-        $key = get_post_meta($post_id, 'qr_key', true);
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'qr_code';
+        $query = $wpdb->prepare(
+            "SELECT qr_key FROM $table_name WHERE post_id = %d",
+            $post_id
+        );
+        $key = $wpdb->get_var($query);
+
         if (!$key) {
-            return 'No QR Code Found';
+            return '<div>No QR Code Found</div>' . $script;
         }
-        // Get the current post's URL
-        $post_url = get_permalink($post_id);
         $encrypt_key = EncryptID::encryptID($key);
         // Construct the URL with the key
         $namespace = 'qr-plugin/v1'; // Replace with your plugin's namespace
@@ -78,12 +86,7 @@ class QrCodePluginFrontend
         // Example QR code generation code
         // You can use $url_with_key as the URL for the QR code
         $generator = new QrGenerator($url_with_key);
-        $res = $generator->generate() . "
-        <script>
-        if (window.location.search) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        </script>";
+        $res = $generator->generate() . $script;
         return $res;
     }
 

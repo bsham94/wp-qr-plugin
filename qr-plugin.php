@@ -1,7 +1,13 @@
 <?php
 /*
 Plugin Name: QR Code Plugin
+Description: This plugin generates QR codes for your posts and provides QR code management.
+Version: 1.0
+License: GPL-2.0+
+License URI: https://www.gnu.org/licenses/gpl-2.0.txt
+Text Domain: qr-code-plugin
 */
+
 
 if (!defined('WPINC')) {
     die;
@@ -20,6 +26,7 @@ require_once API;
 
 
 
+
 register_deactivation_hook(__FILE__, 'my_plugin_deactivation');
 register_activation_hook(__FILE__, 'my_plugin_activation');
 add_action('plugins_loaded', 'qr_code_plugin_init');
@@ -30,17 +37,17 @@ function my_plugin_activation()
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__); // Specify the directory containing your .env file
     $dotenv->load(); // Load environment variables
 
-    if (!get_option('encryption_message')) {
-        $secret = "Da\$Gt48veUdh0!@3463><t2Q";
-        add_option('encryption_message', $secret);
+    if (!get_option('ENCRYPTION_KEY')) {
+        $secret = $_ENV['ENCRYPTION_KEY'];
+        add_option('ENCRYPTION_KEY', $secret);
     }
-    if (!get_option('iv')) {
-        $iv = "AO#0fhPad^#f&h29";
-        add_option('iv', $iv);
+    if (!get_option('IV')) {
+        $iv = $_ENV['IV'];
+        add_option('IV', $iv);
     }
-    if (!get_option('api_key')) {
-        $apiKey = "38Diehf301$38Dh#2@!#d2";
-        add_option('api_key', $apiKey);
+    if (!get_option('API_KEY')) {
+        $apiKey = $_ENV['API_KEY'];
+        add_option('API_KEY', $apiKey);
     }
     create_passphrase_table();
     create_qr_table();
@@ -51,9 +58,9 @@ function my_plugin_activation()
 function my_plugin_deactivation()
 {
     // Remove the message from the database upon deactivation
-    delete_option('encryption_message');
-    delete_option('iv');
-    delete_option('api_key');
+    delete_option('ENCRYPTION_KEY');
+    delete_option('IV');
+    delete_option('API_KEY');
     delete_passphrase_table();
     delete_qr_table();
 }
