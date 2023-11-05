@@ -18,9 +18,9 @@ class QRPluginAdmin
     {
         $mainPageHook = add_menu_page('QR Code Plugin', 'QR Code Plugin', 'manage_options', 'qrcode-plugin-settings', array($this, 'qrPluginAdminPage'), 'dashicons-admin-plugins');
         add_action("load-{$mainPageHook}", array($this, 'addMainPageAssets'));
-        $editPageHook = add_submenu_page(NULL, 'Edit QR Code', 'Edit QR Code', 'manage_options', 'edit-qr-code', array($this, 'editQRCode'));
+        $editPageHook = add_submenu_page(null, 'Edit QR Code', 'Edit QR Code', 'manage_options', 'edit-qr-code', array($this, 'editQRCode'));
         add_action("load-{$editPageHook}", array($this, 'addEditPageAssets'));
-        $addPageHook = add_submenu_page(NULL, 'Add QR Code', 'Add QR Code', 'manage_options', 'add-qr-code', array($this, 'addQRCode'));
+        $addPageHook = add_submenu_page(null, 'Add QR Code', 'Add QR Code', 'manage_options', 'add-qr-code', array($this, 'addQRCode'));
         add_action("load-{$addPageHook}", array($this, 'addAddPageAssets'));
     }
     public function addMainPageAssets()
@@ -103,7 +103,7 @@ class QRPluginAdmin
                         $endpoint_url = rest_url("$namespace/$route?value=$encrypt_key");
                         $url_with_key = esc_url($endpoint_url);
                         $options = new \chillerlan\QRCode\QROptions;
-                        $options->returnResource = True;
+                        $options->returnResource = true;
                         $gdImage = (new \chillerlan\QRCode\QRCode($options))->render($url_with_key);
                         $width = imagesx($gdImage);
                         $height = imagesy($gdImage);

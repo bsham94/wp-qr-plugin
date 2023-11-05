@@ -20,10 +20,10 @@ class QrCodePluginFrontend
 
         if ($category_check && !$test_display && $old_status === 'draft' && $new_status === 'publish') {
             // Generate a unique slug
-            $unique_slug = uniqid('', False);
+            $unique_slug = uniqid('', false);
             // Key for encryption should be 16 characters long
             $len = openssl_cipher_iv_length('aes-256-cbc');
-            $key = uniqid('', True);
+            $key = uniqid('', true);
             $key = str_replace('.', '', substr($key, 0, $len + 1));
 
             // Store the unique slug and key in post meta for later retrieval

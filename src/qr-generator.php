@@ -21,7 +21,7 @@ class QrGenerator
         // $optionsDL->outputType = "png";
         // Generate the QR code image HTML
         $options = new QROptions;
-        $options->returnResource = True;
+        $options->returnResource = true;
         $gdImage = (new QRCode($options))->render($this->data);
         $width = imagesx($gdImage);
         $height = imagesy($gdImage);

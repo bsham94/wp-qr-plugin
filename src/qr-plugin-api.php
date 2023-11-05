@@ -90,7 +90,7 @@ class QRPluginAPI
                 $author_id = get_post_field('post_author', $post_id);
 
                 if (get_current_user_id() !== $author_id && !current_user_can('administrator')) {
-                    $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : False;
+                    $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : false;
 
                     // True means accessing the page from the QR code
                     // False means accessing the page from the URL (direct)
@@ -209,7 +209,7 @@ class QRPluginAPI
                 $post_id = get_the_ID();
                 $author_id = get_post_field('post_author', $post_id);
                 if (get_current_user_id() !== $author_id && !current_user_can('administrator')) {
-                    $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : False;
+                    $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : false;
                     //True means accessing the page from the QR code
                     //False means accessing the page from the url (direct)
                     if ($redirect === 'true') {
