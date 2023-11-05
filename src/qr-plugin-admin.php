@@ -160,10 +160,9 @@ class QRPluginAdmin
             // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
             $category_check = has_term('user_profile', 'category', $object_id);
             if ($category_check) {
-                // Generate a unique slug
                 // Check if a QR code entry with the same slug or key already exists
                 // If not, create a new QR code entry
-                // If it does,  skip creating a new slug. The existing QR code entry will be used.
+                // If it does, skip creating a new slug. The existing QR code entry will be used.
                 if (!$this->qr_code_entry_exists($object_id)) {
                     //Check if the post has the meta key _adding_qr_code
                     //This is to prevent the post from being updated infinitely
@@ -216,7 +215,6 @@ class QRPluginAdmin
     {
         // Get the selected post's data (if provided in the URL)
         $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
-
         // Retrieve user_profile posts for the dropdown
         $args = array(
             'post_type' => 'post',
@@ -231,8 +229,8 @@ class QRPluginAdmin
         $key = str_replace('.', '', substr($key, 0, $len + 1));
         $encrypt_key = EncryptID::encryptID($key);
         // Construct the URL with the key
-        $namespace = 'qr-plugin/v1'; // Replace with your plugin's namespace
-        $route = 'qr-endpoint'; // Replace with your endpoint's route
+        $namespace = 'qr-plugin/v1';
+        $route = 'qr-endpoint';
         // Construct the URL of the registered endpoint with the 'value' query parameter
         $endpoint_url = rest_url("$namespace/$route?value=$encrypt_key");
         $qr_code_url = esc_url($endpoint_url);

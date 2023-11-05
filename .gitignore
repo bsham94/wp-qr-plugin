@@ -1,0 +1,30 @@
+# Ignore WordPress core files
+wp-config.php
+wp-content/
+
+# Ignore Composer dependencies
+/vendor/
+
+# Ignore Composer's autoloader file
+/vendor/autoload.php
+
+# Ignore Composer's generated autoload files
+/vendor/composer/
+
+# Ignore environment configuration files
+.env
+
+# Ignore IDE and editor files
+.vscode/
+.idea/
+*.iml
+
+# Ignore system and temporary files
+*.log
+*.swp
+.DS_Store
+
+# Ignore PHPUnit files
+phpunit.xml
+phpunit.xml.dist
+phpunit-*
