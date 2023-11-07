@@ -26,12 +26,6 @@ class QrCodePluginFrontend
         // Check if the post has the "user_profile" category
         $categories = get_the_category($post_id);
         $is_user_profile = false;
-        $script = "
-            <script>
-                if (window.location.search) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            </script>";
         foreach ($categories as $category) {
             if ($category->slug === 'user_profile') {
                 $is_user_profile = true;
