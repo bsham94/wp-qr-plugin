@@ -144,7 +144,7 @@ class QRPluginAPI
 
         return false;
     }
-    function handle_custom_endpoint_request_with_encryption($request) //-------------------------------------- Need to change from post meta to database query
+    function handle_custom_endpoint_request_with_encryption($request) 
     {
         // Your code to process the request and generate a response
         $key = $request->get_param('value');
