@@ -30,24 +30,24 @@ require_once API;
 register_deactivation_hook(__FILE__, 'my_plugin_deactivation');
 register_activation_hook(__FILE__, 'my_plugin_activation');
 add_action('plugins_loaded', 'qr_code_plugin_init');
-// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__); // Specify the directory containing your .env file
-// $dotenv->load(); // Load environment variables
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__); // Specify the directory containing your .env file
+$dotenv->load(); // Load environment variables
 // Plugin Activation Hook
 function my_plugin_activation()
 {
     if (!get_option('ENCRYPTION_KEY')) {
-        //$secret = $_ENV['ENCRYPTION_KEY'];
-        $secret = "DaaGt48veUdh0!@3463><t2Q";
+        $secret = $_ENV['ENCRYPTION_KEY'];
+        // $secret = "DaaGt48veUdh0!@3463><t2Q";
         add_option('ENCRYPTION_KEY', $secret);
     }
     if (!get_option('IV')) {
-        //$iv = $_ENV['IV'];
-        $iv = "AOd0fhPad^qf&h29";
+        $iv = $_ENV['IV'];
+        // $iv = "AOd0fhPad^qf&h29";
         add_option('IV', $iv);
     }
     if (!get_option('API_KEY')) {
-        //$apiKey = $_ENV['API_KEY'];
-        $apiKey = "38Diehf301g38Dha2@!jd2";
+        $apiKey = $_ENV['API_KEY'];
+        // $apiKey = "38Diehf301g38Dha2@!jd2";
         add_option('API_KEY', $apiKey);
     }
     create_passphrase_table();
