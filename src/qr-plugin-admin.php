@@ -100,7 +100,7 @@ class QRPluginAdmin
                         $namespace = 'qr-plugin/v1'; // Replace with your plugin's namespace
                         $route = 'qr-endpoint'; // Replace with your endpoint's route
                         // Construct the URL of the registered endpoint with the 'value' query parameter
-                        $endpoint_url = rest_url("$namespace/$route?value=$encrypt_key");
+                        $endpoint_url = rest_url("$namespace/$route?value=" . urlencode($encrypt_key));
                         $url_with_key = esc_url($endpoint_url);
                         $options = new \chillerlan\QRCode\QROptions;
                         $options->returnResource = true;
@@ -119,7 +119,7 @@ class QRPluginAdmin
                                         width="<?php echo $width ?>" height="<?php echo $height ?>" />
                                 </td>
                                 <td>
-                                    <a href="<?php echo esc_url($url_with_key); ?>" target="_blank">View</a> |
+                                    <a href="<?php echo $url_with_key; ?>" target="_blank">View</a> |
                                     <a
                                         href="<?php echo esc_url(add_query_arg(array("page" => "edit-qr-code", "action" => "editQrCode", "id" => $post->ID), admin_url())); ?>">Edit</a>
                                     |
@@ -192,9 +192,8 @@ class QRPluginAdmin
                             )
                         );
                     }
-                } else {
-                    update_post_meta($object_id, '_adding_qr_code', false);
                 }
+                update_post_meta($object_id, '_adding_qr_code', false);
             }
         }
     }

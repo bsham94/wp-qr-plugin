@@ -8,37 +8,18 @@ class QrCodePluginFrontend
 {
     public function initialize_hooks()
     {
-        add_shortcode('qr_shortcode', array($this, 'myShortcodeFunction'));
+        add_shortcode('qr_shortcode', array($this, 'shortcodeFunction'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_jquery_script'));
     }
-
-    public function set_unique_profile_slug($new_status, $old_status, $post)
+    function enqueue_jquery_script()
     {
-        $test_display = get_option('test_display');
+        // Enqueue jQuery from the WordPress core
+        wp_enqueue_script('jquery');
+        // Enqueue your custom jQuery file
+        wp_enqueue_script('custom-jquery', BASE_URL . 'js/hideurl.js', array('jquery'), '1.0.0', true);
 
-        // Check if the post is assigned to a specific custom category (replace 'user_profile' with your category slug)
-        $category_check = has_term('user_profile', 'category', $post);
-
-        if ($category_check && !$test_display && $old_status === 'draft' && $new_status === 'publish') {
-            // Generate a unique slug
-            $unique_slug = uniqid('', false);
-            // Key for encryption should be 16 characters long
-            $len = openssl_cipher_iv_length('aes-256-cbc');
-            $key = uniqid('', true);
-            $key = str_replace('.', '', substr($key, 0, $len + 1));
-
-            // Store the unique slug and key in post meta for later retrieval
-            update_post_meta($post->ID, 'unique_slug', $unique_slug);
-            update_post_meta($post->ID, 'qr_key', $key);
-            // Update the post_name (slug)
-            wp_update_post(
-                array(
-                    'ID' => $post->ID,
-                    'post_name' => $unique_slug,
-                )
-            );
-        }
     }
-    public function myShortcodeFunction($atts, $content = null)
+    public function shortcodeFunction($atts, $content = null)
     {
         // Get the current post's ID
         $post_id = get_the_ID();
@@ -59,7 +40,7 @@ class QrCodePluginFrontend
         }
 
         if (!$is_user_profile) {
-            return '<div>This is not a user profile.</div>' . $script;
+            return '<div>This is not a user profile.</div>';
         }
 
         global $wpdb;
@@ -71,7 +52,7 @@ class QrCodePluginFrontend
         $key = $wpdb->get_var($query);
 
         if (!$key) {
-            return '<div>No QR Code Found</div>' . $script;
+            return '<div>No QR Code Found</div>';
         }
         $encrypt_key = EncryptID::encryptID($key);
         // Construct the URL with the key
@@ -79,14 +60,14 @@ class QrCodePluginFrontend
         $route = 'qr-endpoint'; // Replace with your endpoint's route
 
         // Construct the URL of the registered endpoint with the 'value' query parameter
-        $endpoint_url = rest_url("$namespace/$route?value=$encrypt_key");
+        $endpoint_url = rest_url("$namespace/$route?value=" . urlencode($encrypt_key));
 
         $url_with_key = esc_url($endpoint_url);
 
         // Example QR code generation code
         // You can use $url_with_key as the URL for the QR code
         $generator = new QrGenerator($url_with_key);
-        $res = $generator->generate() . $script;
+        $res = $generator->generate();
         return $res;
     }
 
