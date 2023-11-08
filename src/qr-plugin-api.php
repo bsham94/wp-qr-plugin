@@ -89,9 +89,6 @@ class QRPluginAPI
                 // Get the current post's ID
                 $post_id = get_the_ID();
                 $author_id = get_post_field('post_author', $post_id);
-                $a = get_current_user_id();
-                $curr = get_current_user_id() !== $author_id;
-                $curr_can = !current_user_can('administrator');
                 if (get_current_user_id() !== intval($author_id) && !current_user_can('administrator')) {
                     $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : false;
 
