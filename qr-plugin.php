@@ -36,18 +36,18 @@ $dotenv->load(); // Load environment variables
 function my_plugin_activation()
 {
     if (!get_option('ENCRYPTION_KEY')) {
-        $secret = $_ENV['ENCRYPTION_KEY'];
-        // $secret = "DaaGt48veUdh0!@3463><t2Q";
+        // $secret = $_ENV['ENCRYPTION_KEY'];
+        $secret = "DaaGt48veUdh0!@3463><t2Q";
         add_option('ENCRYPTION_KEY', $secret);
     }
     if (!get_option('IV')) {
-        $iv = $_ENV['IV'];
-        // $iv = "AOd0fhPad^qf&h29";
+        // $iv = $_ENV['IV'];
+        $iv = "AOd0fhPad^qf&h29";
         add_option('IV', $iv);
     }
     if (!get_option('API_KEY')) {
-        $apiKey = $_ENV['API_KEY'];
-        // $apiKey = "38Diehf301g38Dha2@!jd2";
+        // $apiKey = $_ENV['API_KEY'];
+        $apiKey = "38Diehf301g38Dha2@!jd2";
         add_option('API_KEY', $apiKey);
     }
     create_passphrase_table();
