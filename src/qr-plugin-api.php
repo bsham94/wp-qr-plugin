@@ -74,6 +74,7 @@ class QRPluginAPI
         wp_redirect(home_url());
         exit;
     }
+    //653ad8c63c4c3
     public function redirect_to_main_url_for_user_profile()
     {
         global $wpdb;
