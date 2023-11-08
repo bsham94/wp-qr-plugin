@@ -89,8 +89,10 @@ class QRPluginAPI
                 // Get the current post's ID
                 $post_id = get_the_ID();
                 $author_id = get_post_field('post_author', $post_id);
-
-                if (get_current_user_id() !== $author_id && !current_user_can('administrator')) {
+                $a = get_current_user_id();
+                $curr = get_current_user_id() !== $author_id;
+                $curr_can = !current_user_can('administrator');
+                if (get_current_user_id() !== intval($author_id) && !current_user_can('administrator')) {
                     $redirect = isset($_GET['redirect']) ? sanitize_text_field($_GET['redirect']) : false;
 
                     // True means accessing the page from the QR code
@@ -145,7 +147,7 @@ class QRPluginAPI
 
         return false;
     }
-    function handle_custom_endpoint_request_with_encryption($request) //-------------------------------------- Need to change from post meta to database query
+    function handle_custom_endpoint_request_with_encryption($request)
     {
         // Your code to process the request and generate a response
         $key = $request->get_param('value');
